@@ -1,47 +1,114 @@
-name: build-binary
+# name: build-binary
+
+# on:
+#   push: 
+#     branches: ["*"]
+#   pull_request:
+#     branches: ["*"]
+
+# jobs:
+#   build_and_test:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v2
+
+#       - name: Set up Go
+#         uses: actions/setup-go@v2
+#         with:
+#           go-version: '1.20'
+
+#       - name: Install dependencies
+#         run: go mod download
+
+#       - name: Build binary
+#         run: go build -o fp-devops main.go
+#         working-directory: ./app
+
+#       - name: Upload binary
+#         uses: actions/upload-artifact@v2
+#         with:
+#           name: fp-devops-binary
+#           path: ./app/fp-devops
+      
+#       - name: Set Up Docker Buildx
+#         uses: docker/setup-buildx-action@v2
+        
+#       - name: Build Docker Image
+#         run: docker compose up -d --build
+#         working-directory: ./app
+
+
+#       - name: Upload Artifact (khusus untuk push ke main)
+#         if: github.ref == 'refs/heads/main'
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: go-app-binary
+#           path: ./app/main # atau path ke binary hasil build jika beda
+
+name: Build and Test Go App
 
 on:
-  push: 
-    branches: ["*"]
+  # Trigger workflow saat ada Pull Request ke branch 'development'
   pull_request:
-    branches: ["*"]
+    branches: [ development ]
+  # Trigger workflow saat ada push ke branch 'main' atau 'development'
+  push:
+    branches:
+      - main
+      - development
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
     steps:
+      # Langkah 1: Mengambil kode dari repository
+      # Gunakan versi terbaru (v4) untuk actions/checkout
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
+      # Langkah 2: Menyiapkan lingkungan Go
+      # Gunakan versi terbaru (v5) untuk actions/setup-go
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.20' # Pastikan ini versi Go proyekmu
 
+      # Langkah 3: Mengunduh dependensi Go
+      # Penting: Tambahkan working-directory karena go.mod ada di ./app
       - name: Install dependencies
+        working-directory: ./app
         run: go mod download
 
-      - name: Build binary
+      # Langkah 4: Membangun binary aplikasi Go
+      # Outputnya bernama 'fp-devops' di dalam folder 'app'
+      - name: Build Go binary
+        working-directory: ./app
         run: go build -o fp-devops main.go
-        working-directory: ./app
 
-      - name: Upload binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: fp-devops-binary
-          path: ./app/fp-devops
-      
+      # Langkah 5: Menjalankan tes Go
+      # Ini penting untuk memastikan kode tidak merusak fungsionalitas
+      - name: Run Go tests
+        working-directory: ./app
+        run: go test ./...
+
+      # Langkah 6: Menyiapkan Docker Buildx (untuk build Docker image)
+      # Ini perlu jika kamu ingin build Docker image di workflow ini
       - name: Set Up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        
+        uses: docker/setup-buildx-action@v2 # v2 adalah versi umum yang stabil
+
+      # Langkah 7: Membangun Docker Image
+      # Ini akan menjalankan 'docker compose up -d --build' dari folder 'app'
       - name: Build Docker Image
-        run: docker compose up -d --build
         working-directory: ./app
+        run: docker compose up -d --build
 
-
-      - name: Upload Artifact (khusus untuk push ke main)
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+      # Langkah 8: Mengunggah binary aplikasi Go sebagai artefak
+      # Ini akan dijalankan HANYA jika ada push ke branch 'main'
+      # Ini relevan untuk tugas 2.5 (Merge - Build)
+      - name: Upload Go binary artifact (on push to main)
+        if: github.ref == 'refs/heads/main' # Kondisi: hanya jika branch adalah 'main'
+        uses: actions/upload-artifact@v4 # Gunakan versi terbaru (v4)
         with:
-          name: go-app-binary
-          path: ./app/main # atau path ke binary hasil build jika beda
+          name: fp-devops-binary # Nama artefak
+          path: ./app/fp-devops # Path ke binary yang sudah di-build (`fp-devops` di dalam `app`)
